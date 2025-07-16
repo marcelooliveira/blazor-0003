@@ -1,0 +1,35 @@
+name: Deploy Blazor WebAssembly to GitHub Pages
+
+on:
+  push:
+	branches:
+	  - main  # Este fluxo de trabalho vai rodar sempre que você enviar código para a branch 'main' do seu repositório.
+
+permissions: 
+  contents: write # Permite que o GitHub Actions leia e grave arquivos no seu repositório.
+  pages: write   # Permite que ele publique na parte de GitHub Pages.
+  id-token: write # É uma permissão de segurança para autenticação.
+
+jobs:
+  deploy: # Este é o nome da tarefa que será executada.
+
+	runs-on: ubuntu-latest # A tarefa será executada em um servidor Linux fornecido pelo GitHub.
+
+	steps:
+	- uses: actions/checkout@v4 # Este passo baixa todo o código do seu repositório para o servidor.
+	- name: Setup .NET Core # Este passo configura o ambiente .NET necessário para o seu projeto.
+	  uses: actions/setup-dotnet@v4 # Usa uma ação pré-pronta para instalar o .NET.
+	  with:
+		dotnet-version: 9.0.x # Define a versão do .NET que o seu projeto usa (você pode mudar para 6.0.x, 7.0.x ou 8.0.x se for o caso).
+	- name: Publish with dotnet # Este passo compila e prepara seu aplicativo Blazor para ser publicado.
+	  run: dotnet publish --configuration Release --output build # Ele cria uma versão otimizada (Release) e coloca todos os arquivos prontos na pasta 'build'.
+
+	- name: Change base-tag in index.html from / to repo name # Este é um passo crucial para Blazor no GitHub Pages.
+	  run: sed -i "s|<base href=\"/\" />|<base href=\"/${GITHUB_REPO_NAME}/\" />|g" build/wwwroot/index.html # Ele ajusta um pedaço do código no arquivo 'index.html' para que o Blazor saiba o caminho correto para encontrar seus arquivos no GitHub Pages.
+	  env:
+		GITHUB_REPO_NAME: ${{ github.event.repository.name }} # Automaticamente pega o nome do seu repositório para o ajuste.
+	- name: Commit wwwroot to GitHub Pages # Este passo envia os arquivos prontos do seu Blazor para o GitHub Pages.
+	  uses: JamesIves/github-pages-deploy-action@3.7.1 # Usa uma ferramenta especial que faz o upload para o GitHub Pages.
+	  with:
+		BRANCH: gh-pages # Os arquivos serão enviados para uma branch chamada 'gh-pages', que será o seu site.
+		FOLDER: build/wwwroot # Esta é a pasta que contém todos os arquivos do seu aplicativo Blazor prontos para serem servidos.
